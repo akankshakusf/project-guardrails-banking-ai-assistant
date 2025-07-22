@@ -1,1 +1,1 @@
-# Project-guardrails-banking-ai-assistant
+# project-guardrails-banking-ai-assistant
