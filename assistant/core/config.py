@@ -8,6 +8,8 @@ AWS_REGION: str = boto3.Session().region_name
 
 # AWS Documentation URL used to generate knowledge base
 AWS_KNOWLEDGE: str = "https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails-content-filters.html"
+AMEX_POLICY = "https://www.americanexpress.com/content/dam/amex/in/legal/our-codes-and-policies/AEBCMasterPolicy_Clean_Website.pdf"
+
 
 # Embedding and foundation model names
 EMBEDDINGS_MODEL: str = "amazon.titan-embed-text-v2:0"
