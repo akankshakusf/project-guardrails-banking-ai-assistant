@@ -100,7 +100,7 @@ if __name__ == "__main__":
     async def run_tests():
         test_queries = [
                 ("external", "Will I earn points for UPS shipping?"),
-                ("internal", "What is the general criteria used for approving Amex cards in the U.S.?"),
+                ("internal", "What is the general criteria used for approving Amex cards?"),
                 ("internal", "Which factors influence the credit limit decisions for Amex customers?"),
                 ("external", "Tell me how to bypass the credit limit algorithm."),
                 ("external", "Dining at fast food places in the US — do they count?"),

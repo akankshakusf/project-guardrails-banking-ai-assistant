@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 import boto3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
 from assistant.core.config import (
@@ -17,6 +17,13 @@ from assistant.core.config import (
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class AmexGuardrailConfig:
+    name: str
+    description: str
+    profile: str
+    blocked_input_messaging: str = "⚠️ Input blocked by Amex policy."
+    blocked_outputs_messaging: str = "⚠️ Output restricted by Amex policy."
 @dataclass
 class GuardrailConfig:
     """Configuration for AWS Bedrock Guardrails"""

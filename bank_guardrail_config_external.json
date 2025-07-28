@@ -1,6 +1,12 @@
 {
-  "guardrail_id": "hzvfbr6gym4o",
+  "guardrail_id": "amex-guardrail-internal",
   "guardrail_version": "DRAFT",
-  "profile": "external",
-  "created_at": "2025-07-25T16:00:46.744018"
+  "profile": "internal",
+  "created_at": "2025-07-28T11:17:23.424715",
+  "denied_topics": [],
+  "blocked_words": [],
+  "allowed_words": [
+    "fraud", "risk", "scoring", "credit limit", "chargeback", "delinquency", "underwriting"
+  ],
+  "grounding_required": false
 }

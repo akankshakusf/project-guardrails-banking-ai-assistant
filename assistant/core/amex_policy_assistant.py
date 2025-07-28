@@ -70,52 +70,36 @@ class NotionAmexFAQStore:
 
 
 class AmexPolicyAssistant:
-    """
-    Main orchestrator for Amex: Guardrails + Amex Policy KB + Notion FAQ Vectorstore + Strands Agent.
-
-    user_type / profile:
-      - "external": customer-facing (default)
-      - "internal": employee-facing
-    """
-
     def __init__(
         self,
         region_name: str = AWS_REGION,
         guardrail_id: Optional[str] = None,
         user_type: GuardrailProfile = "external",
     ):
-        logger.info(f"🔧 Initializing AmexPolicyAssistant (profile={user_type})")
+        logger.info(f"🔧 Initializing AmexPolicyAssistant (profile={user_type}, use_bedrock_guardrails=False)")
         self.region_name = region_name
         self.session_id = str(uuid.uuid4())
         self.user_type: GuardrailProfile = user_type
 
-        # Knowledge bases
         self.policy_kb = AmexKnowledgeBase()
         self.notion_store = NotionAmexFAQStore(region_name=region_name, model_id=EMBEDDINGS_MODEL)
 
-        # Guardrails (profile-aware)
         self.guardrails_manager = AmexGuardrailsManager(
             region_name,
             guardrail_id,
             profile=user_type
         )
 
-        # LLM Agent
         self.agent: Optional[Agent] = None
 
-        # Boot sequence
         self._initialize_kb()
         self._initialize_guardrails()
         self._initialize_agent()
 
-    # ----------------------------------------------------------------------------------
-    # Init
-    # ----------------------------------------------------------------------------------
     def _initialize_kb(self):
         try:
             self.policy_kb.initialize_embeddings_model(self.region_name)
             self.policy_kb.load_amex_policy()
-
             self.notion_store.load()
             logger.info("📚 Knowledge bases initialized")
         except Exception as e:
@@ -123,7 +107,7 @@ class AmexPolicyAssistant:
 
     def _initialize_guardrails(self):
         try:
-            if not self.guardrails_manager.guardrail_id:
+            if not getattr(self.guardrails_manager, "guardrail_id", None):
                 config = AmexGuardrailConfig(
                     name=f"amex-guardrail-{self.user_type}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
                     description=f"Amex Guardrails (Bedrock) - {self.user_type}",
@@ -155,7 +139,7 @@ class AmexPolicyAssistant:
 
             @tool
             def is_policy_compliant(text: str) -> str:
-                resp = self.guardrails_manager.apply_guardrail(text, is_input=True)
+                resp = self.guardrails_manager.apply_guardrails(text, is_input=True, user_type=self.user_type)
                 return json.dumps(resp, indent=2)
 
             self.agent = Agent(
@@ -167,9 +151,6 @@ class AmexPolicyAssistant:
             logger.exception(f"⚠️ Agent initialization failed: {e}")
             self.agent = None
 
-    # ----------------------------------------------------------------------------------
-    # Tool impls
-    # ----------------------------------------------------------------------------------
     def search_amex_policy(self, query: str) -> str:
         try:
             results = self.policy_kb.search_similar_content(query, k=3)
@@ -199,16 +180,21 @@ class AmexPolicyAssistant:
             logger.exception(f"search_notion_faqs failed: {e}")
             return "⚠️ Error searching Notion FAQs."
 
-    # ----------------------------------------------------------------------------------
-    # Inference
-    # ----------------------------------------------------------------------------------
     def process_user_query(self, query: str) -> Dict[str, Any]:
         logger.info(f"📝 Processing query: {query} (profile={self.user_type})")
         try:
             guard_input = self.guardrails_manager.apply_guardrail(query, is_input=True)
-            if guard_input.get("action") == "GUARDRAIL_INTERVENED":
+
+            if isinstance(guard_input, dict) and guard_input.get("action") == "GUARDRAIL_INTERVENED":
                 return {
                     "response": "⚠️ Input blocked by Amex guardrails.",
+                    "blocked": True,
+                    "reason": "Input blocked by guardrail",
+                    "session_id": self.session_id,
+                }
+            elif isinstance(guard_input, str):
+                return {
+                    "response": guard_input,
                     "blocked": True,
                     "reason": "Input blocked by guardrail",
                     "session_id": self.session_id,
@@ -226,9 +212,17 @@ class AmexPolicyAssistant:
             response_text = reply.response if hasattr(reply, "response") else str(reply)
 
             guard_output = self.guardrails_manager.apply_guardrail(response_text, is_input=False)
-            if guard_output.get("action") == "GUARDRAIL_INTERVENED":
+
+            if isinstance(guard_output, dict) and guard_output.get("action") == "GUARDRAIL_INTERVENED":
                 return {
                     "response": "⚠️ Response blocked by output safety filters.",
+                    "blocked": True,
+                    "reason": "Output blocked",
+                    "session_id": self.session_id,
+                }
+            elif isinstance(guard_output, str):
+                return {
+                    "response": guard_output,
                     "blocked": True,
                     "reason": "Output blocked",
                     "session_id": self.session_id,
@@ -244,16 +238,21 @@ class AmexPolicyAssistant:
             logger.exception(f"❌ Failed to process query: {e}")
             return {
                 "response": "⚠️ Internal error. Please try again.",
-                    "blocked": True,
-                    "reason": "System error",
-                    "session_id": self.session_id,
-                }
+                "blocked": True,
+                "reason": "System error",
+                "session_id": self.session_id,
+            }
+
 
     async def stream_response(self, query: str):
         try:
-            guard_input = self.guardrails_manager.apply_guardrail(query, is_input=True)
-            if guard_input.get("action") == "GUARDRAIL_INTERVENED":
+            guard_input = self.guardrails_manager.apply_guardrails(query, is_input=True, user_type=self.user_type)
+
+            if isinstance(guard_input, dict) and guard_input.get("action") == "GUARDRAIL_INTERVENED":
                 yield "⚠️ Input violates Amex safety policy."
+                return
+            elif isinstance(guard_input, str):
+                yield guard_input
                 return
 
             if not self.agent:
@@ -268,22 +267,23 @@ class AmexPolicyAssistant:
                     full += chunk
                     yield chunk
 
-            guard_output = self.guardrails_manager.apply_guardrail(full, is_input=False)
-            if guard_output.get("action") == "GUARDRAIL_INTERVENED":
+            guard_output = self.guardrails_manager.apply_guardrails(full, is_input=False, user_type=self.user_type)
+
+            if isinstance(guard_output, dict) and guard_output.get("action") == "GUARDRAIL_INTERVENED":
                 yield "\n⚠️ Response blocked by safety policy."
+            elif isinstance(guard_output, str):
+                yield "\n" + guard_output
 
         except Exception as e:
             logger.exception(f"❌ Streaming failed: {e}")
             yield "⚠️ Error generating response."
 
 
-# --------------------------------------------------------------------------------------
-# Simple local dry-run
-# --------------------------------------------------------------------------------------
+ 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    # Try both profiles
     for profile in ("external", "internal"):
         print(f"\n==================== {profile.upper()} ====================\n")
         assistant = AmexPolicyAssistant(user_type=profile)
