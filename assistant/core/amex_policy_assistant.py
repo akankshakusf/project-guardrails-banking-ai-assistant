@@ -1,4 +1,3 @@
-# assistant/core/amex_policy_assistant.py
 import os
 import uuid
 import json
@@ -8,6 +7,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 
 import boto3
+import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 
@@ -30,7 +30,6 @@ from assistant.core.amex_guardrails import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class NotionAmexFAQStore:
     """Lightweight loader/query wrapper around the FAISS vectorstore built in notion_amex_faqs.py."""
@@ -67,7 +66,6 @@ class NotionAmexFAQStore:
             return []
         docs = self.store.similarity_search(query, k=k)
         return [d.page_content for d in docs]
-
 
 class AmexPolicyAssistant:
     def __init__(
@@ -151,13 +149,32 @@ class AmexPolicyAssistant:
             logger.exception(f"⚠️ Agent initialization failed: {e}")
             self.agent = None
 
+    @staticmethod
+    def deduplicate_passages(passages, min_length=30):
+        """
+        Remove duplicate/near-duplicate passages (case insensitive, stripped, ignoring punctuation).
+        Keeps order. Works for both list-of-strings and list-of-dicts (with 'content' key).
+        """
+        seen = set()
+        deduped = []
+        for p in passages:
+            text = p if isinstance(p, str) else p.get("content", "")
+            text_norm = re.sub(r"\W+", " ", text).strip().lower()
+            if len(text_norm) < min_length:
+                continue
+            if text_norm not in seen:
+                seen.add(text_norm)
+                deduped.append(p)
+        return deduped
+
     def search_amex_policy(self, query: str) -> str:
         try:
-            results = self.policy_kb.search_similar_content(query, k=3)
+            results = self.policy_kb.search_similar_content(query, k=6)  # Get more to dedupe/filter
+            results = self.deduplicate_passages(results)
             if not results:
                 return "❓ No relevant Amex policy content found."
             out = ["📘 **Amex Policy Matches:**"]
-            for r in results:
+            for r in results[:3]:   # Limit to top 3 *after* deduplication
                 out.append(
                     f"- **Source**: {r.get('source')} | **Score**: {r.get('similarity_score'):.4f}\n"
                     f"```\n{r.get('content')[:1500]}\n```"
@@ -243,7 +260,6 @@ class AmexPolicyAssistant:
                 "session_id": self.session_id,
             }
 
-
     async def stream_response(self, query: str):
         try:
             guard_input = self.guardrails_manager.apply_guardrails(query, is_input=True, user_type=self.user_type)
@@ -277,9 +293,6 @@ class AmexPolicyAssistant:
         except Exception as e:
             logger.exception(f"❌ Streaming failed: {e}")
             yield "⚠️ Error generating response."
-
-
- 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

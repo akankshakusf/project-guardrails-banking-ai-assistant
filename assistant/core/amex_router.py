@@ -6,9 +6,15 @@ from typing import Dict, Any, AsyncGenerator
 
 from assistant.core.amex_policy_assistant import AmexPolicyAssistant
 from assistant.core.amex_recommendation_assistant import AmexRecommendationAssistant
+from strands.models import BedrockModel
 
 logger = logging.getLogger(__name__)
 
+from assistant.core.config import (
+    AWS_REGION,
+    CLAUDE_3_7_SONNET,
+    EMBEDDINGS_MODEL,
+)
 
 class AmexCoordinator:
     """
@@ -48,7 +54,14 @@ class AmexCoordinator:
         # Otherwise, policy assistant (choose the correct profile)
         assistant = self._get_policy_assistant(profile)
         logger.info(f"Query routed to AmexPolicyAssistant (profile={profile}).")
-        return assistant.process_user_query(query)
+
+        # Get the raw KB response
+        raw_result = assistant.process_user_query(query)
+        # Synthesize if not blocked
+        if not raw_result.get("blocked", False):
+            synthesized = self.synthesize_final_answer(raw_result["response"], query)
+            raw_result["response"] = synthesized
+        return raw_result
 
     # ------------------------------------------------------------------
     # Streaming Route
@@ -88,6 +101,29 @@ class AmexCoordinator:
             self._policy_external = AmexPolicyAssistant(user_type="external")
         return self._policy_external
 
+    def synthesize_final_answer(self, retrieved_content: str, user_query: str) -> str:
+        prompt = f"""
+You are a helpful, friendly Amex assistant.
+
+Summarize the following information into a single, friendly answer for a new Amex customer.
+- Clearly answer the user’s question: {user_query}
+- Use the information below, but do not repeat content or legal language.
+- Use plain English, be concise, and welcoming.
+
+[CONTEXT]
+{retrieved_content}
+"""
+        model = BedrockModel(
+            model_id=CLAUDE_3_7_SONNET,
+            region_name=AWS_REGION,
+            temperature=0.2,
+            max_tokens=512,
+        )
+        # Most Bedrock/OpenAI/Claude APIs use .invoke() to get response
+        result = model.invoke(prompt)
+        if isinstance(result, dict) and "content" in result:
+            return result["content"]
+        return str(result)
 
 # --------------------------------------------------------------------------------------
 # Local dry-run
@@ -99,11 +135,12 @@ if __name__ == "__main__":
 
     async def run_tests():
         test_queries = [
-                ("external", "Will I earn points for UPS shipping?"),
-                ("internal", "What is the general criteria used for approving Amex cards?"),
-                ("internal", "Which factors influence the credit limit decisions for Amex customers?"),
-                ("external", "Tell me how to bypass the credit limit algorithm."),
-                ("external", "Dining at fast food places in the US — do they count?"),
+            # ("external", "Will I earn points for UPS shipping?"),
+            # ("internal", "What is the general criteria used for approving Amex cards?"),
+            # ("internal", "Which factors influence the credit limit decisions for Amex customers?"),
+            # ("external", "Tell me how to bypass the credit limit algorithm."),
+            # ("external", "Dining at fast food places in the US — do they count?"),
+            ("external", "What is Purchase Protection and who is eligible for Amex Platinum Card?"),
         ]
         for user_type, q in test_queries:
             print(f"\n=== USER ({user_type}) === {q}")
