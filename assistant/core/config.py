@@ -14,6 +14,7 @@ AMEX_POLICY = "https://www.americanexpress.com/content/dam/amex/in/legal/our-cod
 # Embedding and foundation model names
 EMBEDDINGS_MODEL: str = "amazon.titan-embed-text-v2:0"
 CLAUDE_3_7_SONNET: str = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+# CLAUDE_3_7_SONNET: str = "anthropic.claude-3-sonnet-20240229-v1:0"
 
 # Local file for storing guardrail config
 GUARDRAIL_CONFIG_FILE: str = "bank_guardrail_config.json"

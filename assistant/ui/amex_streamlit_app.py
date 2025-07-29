@@ -20,8 +20,8 @@ def display_status():
     status = st.session_state.initialization_status
     if status == "success":
         st.markdown("""
-        <div style="background-color:#e6f4ea; padding:10px; border-radius:10px; margin:10px 0; border-left:5px solid #34a853;">
-            ✅ <strong>Assistant is ready</strong> – All guardrails enabled.
+        <div style="background-color:#006FCF; padding:10px; border-radius:10px; margin:10px 0; border-left:5px solid #34a853;">
+            <span style="color:#e0e4ea; font-weight:bold;">✅ <strong>Assistant is ready</strong> – All guardrails enabled.
         </div>
         """, unsafe_allow_html=True)
     elif status == "loading":
@@ -32,29 +32,35 @@ def display_status():
         """, unsafe_allow_html=True)
     elif status == "error":
         st.markdown("""
-        <div style="background-color:#fdecea; padding:10px; border-radius:10px; margin:10px 0; border-left:5px solid #ea4335;">
+        <div style="background-color:#e6f4ea; padding:10px; border-radius:10px; margin:10px 0; border-left:5px solid #34a853;">
             ❌ <strong>Initialization failed</strong> – Check configuration.
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div style="background-color:#e3f2fd; padding:10px; border-radius:10px; margin:10px 0; border-left:5px solid #4285f4;">
-            ⚙️ <strong>Please configure the assistant.</strong>
+        <div style="background-color:#006FCF ; padding:10px; border-radius:10px; margin:10px 0; border-left:5px solid #3b82f6;">
+            <span style="color:#e0e4ea; font-weight:bold;">⚙️ Please configure the assistant.</span>
         </div>
         """, unsafe_allow_html=True)
 
 def display_message(role: str, content: str, blocked: bool = False):
     avatar = "👤" if role == "user" else "🤖"
-    bg_color = "#e3f2fd" if role == "user" else "#fff3e0"
+    # Change this hex to your desired color
+    bg_color = "#E8EAF6" if role == "user" else "#006FCF"
     border = "#90caf9" if role == "user" else "#ffb74d"
     safe_content = html.escape(content)
     if blocked:
         safe_content = f"🚫 {safe_content}"
+    # --- Label for synthesized answer ---
+    if role == "assistant":
+        label = '<span style="font-size:13px; color:#006FCF;"><strong>Amex Synthesized Answer</strong></span><br>'
+    else:
+        label = ""
     st.markdown(f"""
     <div style="background-color:{bg_color}; border-left:5px solid {border}; padding:10px; border-radius:10px; margin:10px 0">
-        <strong>{avatar} {role.capitalize()}:</strong><br>{safe_content}</div>""", unsafe_allow_html=True)
+        <strong>{avatar} {role.capitalize()}:</strong><br>{label}{safe_content}</div>""", unsafe_allow_html=True)
 
-# ========== NEW: Guardrail Policy Box ==========
+# ========== Guardrail Policy Box ==========
 
 def display_guardrail_policy(profile="external"):
     guardrails_manager = AmexGuardrailsManager(region_name=AWS_REGION, profile=profile)
@@ -83,7 +89,6 @@ def display_guardrail_policy(profile="external"):
 def initialize_assistant(user_type: str):
     st.session_state.initialization_status = "loading"
     try:
-        # Optionally: Add any config/guardrail params you want to make dynamic
         st.session_state.amex_coordinator = AmexCoordinator(default_user_type=user_type)
         st.session_state.initialization_status = "success"
     except Exception as e:
@@ -92,10 +97,10 @@ def initialize_assistant(user_type: str):
 
 def amex_streamlit_app():
     load_dotenv()
-    st.set_page_config(page_title="Amex Banking AI Compliance Assistant", layout="wide")
-    st.title("💳 Amex Banking AI Compliance Assistant")
+    st.set_page_config(page_title="Amex Banking AI Assistant", layout="wide")
+    st.title("💳 Amex Banking AI Assistant")
 
-    # ====== Init session state ======
+    # Init session state
     if "amex_coordinator" not in st.session_state:
         st.session_state.amex_coordinator = None
     if "chat_history" not in st.session_state:
@@ -105,21 +110,19 @@ def amex_streamlit_app():
     if "user_type" not in st.session_state:
         st.session_state.user_type = "external"
 
-    # ====== Sidebar ======
+    # Sidebar
     with st.sidebar:
         st.header("🔧 Assistant Configuration")
         user_type = st.selectbox("User Type (Profile)", ["external", "internal"], index=0)
         st.session_state.user_type = user_type
         if st.button("🚀 Initialize Assistant", type="primary"):
             initialize_assistant(user_type=user_type)
-        # NEW: Show current guardrails for the selected profile
         display_guardrail_policy(profile=user_type)
-        
 
-    # ====== Main Layout ======
+    # Main Layout
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.header("💬 Chat Interface")
+        st.subheader("💬 Chat Interface")
         display_status()
         with st.container():
             for message in st.session_state.chat_history:
@@ -145,14 +148,14 @@ def amex_streamlit_app():
                             })
                             st.rerun()
                         else:
-                            st.error("Assistant is not initialized. Please initialize in the sidebar.")
+                            st.error("Assistant is not initialized.")
                     except Exception as e:
                         st.error(f"Error processing query: {e}")
         else:
             st.info("Please initialize the assistant using the sidebar configuration.")
 
     with col2:
-        st.header("📊 App Status")
+        st.subheader("📊 App Status")
         if st.session_state.initialization_status == "success":
             st.success("✅ Assistant Ready")
             st.success("🔒 Guardrails Active")
@@ -165,23 +168,6 @@ def amex_streamlit_app():
         else:
             st.info("⚙️ Not Initialized")
 
-        st.markdown("---")
-        st.subheader("💡 Example Queries")
-        for query in [
-            "What is Purchase Protection and who is eligible for Amex Platinum Card?",
-            "How does Amex determine credit card approvals based on U.S. credit scores?",
-            "Will I earn points for UPS shipping?",
-            "Dining at fast food places in the US — do they count?",
-        ]:
-            if st.button(f"📝 {query[:30]}...", key=f"ex_{hash(query)}"):
-                if st.session_state.initialization_status == "success":
-                    st.session_state.chat_history.append({
-                        'role': 'user',
-                        'content': query,
-                        'blocked': False
-                    })
-                    st.rerun()
-        st.markdown("---")
         if st.button("🗑️ Clear Chat"):
             st.session_state.chat_history = []
             st.rerun()
@@ -190,6 +176,39 @@ def amex_streamlit_app():
             st.session_state.initialization_status = "not_started"
             st.rerun()
 
-# ========== Entrypoint ==========
+        st.markdown("💡Sample Queries")
+        sample_queries = [
+            "What is Purchase Protection and who is eligible for Amex Platinum Card?",
+            "How does Amex determine credit card approvals based on U.S. credit scores?",
+            "Will I earn points for UPS shipping if purchased through Amex Card?",
+            "Dining at fast food places in the US — do they count?",
+        ]
+        for query in sample_queries:
+            if st.button(f"📝 {query[:90]}...", key=f"ex_{hash(query)}"):
+                if st.session_state.initialization_status == "success":
+                    st.session_state.chat_history.append({
+                        'role': 'user',
+                        'content': query,
+                        'blocked': False
+                    })
+                    with st.spinner("Thinking..."):
+                        try:
+                            agent = st.session_state.amex_coordinator
+                            if agent:
+                                result = agent.route_query(query, user_type=st.session_state.user_type)
+                                st.session_state.chat_history.append({
+                                    'role': 'assistant',
+                                    'content': result['response'],
+                                    'blocked': result.get('blocked', False)
+                                })
+                                st.rerun()
+                            else:
+                                st.error("Assistant is not initialized.")
+                        except Exception as e:
+                            st.error(f"Error processing query: {e}")
+                else:
+                    st.warning("Please initialize the assistant first.")
+
+# Entrypoint
 if __name__ == "__main__":
     amex_streamlit_app()

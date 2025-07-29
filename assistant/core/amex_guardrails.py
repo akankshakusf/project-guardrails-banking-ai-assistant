@@ -1,3 +1,5 @@
+# assistant/core/amex_guardrails.py
+
 import logging
 import os
 import json
@@ -94,10 +96,10 @@ class AmexGuardrailsManager:
                 denied_topics=[
                     "fraud techniques", "how to bypass", "exploit", "internal system flaws"
                 ],
-                blocked_words=["placeholder"],  # ✅ Added to meet Bedrock requirements
+                blocked_words=["jailbreak", "rob", "bomb", "break model"],  # ✅ Added to meet Bedrock requirements
                 allowed_words=[
-                    "fraud", "risk", "scoring", "credit limit",
-                    "chargeback", "delinquency", "underwriting"
+                    "fraud", "risk", "scoring", "credit limit", "internal",
+                    "chargeback", "delinquency" ,"credit scores", "underwriting", "credit card"
                 ],
                 pii_entities=[
                     "NAME", "EMAIL", "PHONE", "US_SOCIAL_SECURITY_NUMBER"
@@ -133,7 +135,8 @@ class AmexGuardrailsManager:
 
         if result.get("action") == "GUARDRAIL_INTERVENED":
             logger.warning(f"Blocked by Bedrock: {result.get('reason')}")
-            return result.get("outputs", [{}])[0].get("text", "⚠️ This content violates policy.")
+            # return result.get("outputs", [{}])[0].get("text", "⚠️ This content violates policy.")
+            return result  # <-- Always return the dict now
 
         return None
 

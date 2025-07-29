@@ -1,4 +1,4 @@
-# notion_amex_faqs.py
+# assistant/core/notion_amex_faqs.py
 
 import os
 import json

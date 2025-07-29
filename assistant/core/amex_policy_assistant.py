@@ -1,3 +1,4 @@
+# assistant/core/amex_policy_assistant.py
 import os
 import uuid
 import json
@@ -22,6 +23,8 @@ from assistant.core.config import (
     CLAUDE_3_7_SONNET,
     EMBEDDINGS_MODEL,
 )
+
+# print(f"[DEBUG] Using model: {CLAUDE_3_7_SONNET}")
 from assistant.core.amex_policy_knowledge import AmexKnowledgeBase
 from assistant.core.amex_guardrails import (
     AmexGuardrailsManager,
@@ -31,9 +34,80 @@ from assistant.core.amex_guardrails import (
 
 logger = logging.getLogger(__name__)
 
-class NotionAmexFAQStore:
-    """Lightweight loader/query wrapper around the FAISS vectorstore built in notion_amex_faqs.py."""
 
+# --------------------------------------------------------------------------------------
+# Synthesis Assistant
+# --------------------------------------------------------------------------------------
+
+class AmexSynthesisAssistant:
+    def __init__(self):
+        self.model = BedrockModel(
+            model_id=CLAUDE_3_7_SONNET,
+            region_name=AWS_REGION,
+            temperature=0.3,
+            max_tokens=800,
+        )
+
+        self.agent = Agent(
+            tools=[],
+            model=self.model,
+            name="AmexSynthesisAgent"
+        )
+
+    @tool(
+        name="synthesize_amex_policy_response",
+        description="Summarize Amex policy content into a friendly final answer."
+    )
+    def _synthesize(self, query: str, context: str) -> str:
+        """
+        Return the synthesis prompt - let the agent handle the actual generation.
+        """
+        return f"""
+        You are a helpful, friendly Amex assistant.
+
+        Summarize the following information into a single, friendly answer for a new Amex customer.
+        - Clearly answer the user's question: {query}
+        - Use the information below, but do not repeat content or legal language.
+        - Use plain English, be concise, and welcoming.
+
+        [CONTEXT]
+        {context}
+        """
+
+    def synthesize_response(self, query: str, context: str) -> str:
+        """
+        Use the agent to synthesize a response using the correct Strands API.
+        """
+        try:
+            synthesis_prompt = (
+                f"You are a helpful, friendly Amex assistant.\n\n"
+                f"Summarize the following for a new Amex customer.\n"
+                f"Question: {query}\n"
+                f"Context:\n{context}\n"
+                f"Do not repeat legal language. Be concise and welcoming."
+            )
+            
+            # Use the correct Strands Agent API
+            result = self.agent(synthesis_prompt)
+            
+            # Extract response from the result
+            if hasattr(result, 'response'):
+                return result.response
+            elif hasattr(result, 'content'):
+                return result.content
+            else:
+                return str(result)
+            
+        except Exception as e:
+            logger.error(f"Error in synthesize_response: {e}")
+            return f"I apologize, but I'm having trouble processing your question about: {query}. Please try again."
+
+
+
+# --------------------------------------------------------------------------------------
+# Notion FAQ Wrapper
+# --------------------------------------------------------------------------------------
+class NotionAmexFAQStore:
     def __init__(
         self,
         region_name: str = AWS_REGION,
@@ -67,6 +141,10 @@ class NotionAmexFAQStore:
         docs = self.store.similarity_search(query, k=k)
         return [d.page_content for d in docs]
 
+
+# --------------------------------------------------------------------------------------
+# Main Assistant
+# --------------------------------------------------------------------------------------
 class AmexPolicyAssistant:
     def __init__(
         self,
@@ -81,13 +159,8 @@ class AmexPolicyAssistant:
 
         self.policy_kb = AmexKnowledgeBase()
         self.notion_store = NotionAmexFAQStore(region_name=region_name, model_id=EMBEDDINGS_MODEL)
-
-        self.guardrails_manager = AmexGuardrailsManager(
-            region_name,
-            guardrail_id,
-            profile=user_type
-        )
-
+        self.synthesizer = AmexSynthesisAssistant()
+        self.guardrails_manager = AmexGuardrailsManager(region_name, guardrail_id, profile=user_type)
         self.agent: Optional[Agent] = None
 
         self._initialize_kb()
@@ -151,10 +224,6 @@ class AmexPolicyAssistant:
 
     @staticmethod
     def deduplicate_passages(passages, min_length=30):
-        """
-        Remove duplicate/near-duplicate passages (case insensitive, stripped, ignoring punctuation).
-        Keeps order. Works for both list-of-strings and list-of-dicts (with 'content' key).
-        """
         seen = set()
         deduped = []
         for p in passages:
@@ -169,12 +238,12 @@ class AmexPolicyAssistant:
 
     def search_amex_policy(self, query: str) -> str:
         try:
-            results = self.policy_kb.search_similar_content(query, k=6)  # Get more to dedupe/filter
+            results = self.policy_kb.search_similar_content(query, k=6)
             results = self.deduplicate_passages(results)
             if not results:
                 return "❓ No relevant Amex policy content found."
             out = ["📘 **Amex Policy Matches:**"]
-            for r in results[:3]:   # Limit to top 3 *after* deduplication
+            for r in results[:3]:
                 out.append(
                     f"- **Source**: {r.get('source')} | **Score**: {r.get('similarity_score'):.4f}\n"
                     f"```\n{r.get('content')[:1500]}\n```"
@@ -197,26 +266,26 @@ class AmexPolicyAssistant:
             logger.exception(f"search_notion_faqs failed: {e}")
             return "⚠️ Error searching Notion FAQs."
 
+    def synthesize_response(self, query: str, context: str) -> str:
+        """
+        Fixed synthesis method that properly calls the synthesizer.
+        """
+        return self.synthesizer.synthesize_response(query, context)
+
     def process_user_query(self, query: str) -> Dict[str, Any]:
         logger.info(f"📝 Processing query: {query} (profile={self.user_type})")
         try:
-            guard_input = self.guardrails_manager.apply_guardrail(query, is_input=True)
-
-            if isinstance(guard_input, dict) and guard_input.get("action") == "GUARDRAIL_INTERVENED":
+            guard_input = self.guardrails_manager.apply_guardrails(query, is_input=True)
+    
+            # --- Block if guardrail intervened ---
+            if guard_input and isinstance(guard_input, dict) and guard_input.get("action") == "GUARDRAIL_INTERVENED":
                 return {
-                    "response": "⚠️ Input blocked by Amex guardrails.",
+                    "response": guard_input.get("outputs", [{}])[0].get("text", "⚠️ Input blocked by Amex guardrails."),
                     "blocked": True,
-                    "reason": "Input blocked by guardrail",
+                    "reason": guard_input.get("reason", "Input blocked by guardrail"),
                     "session_id": self.session_id,
                 }
-            elif isinstance(guard_input, str):
-                return {
-                    "response": guard_input,
-                    "blocked": True,
-                    "reason": "Input blocked by guardrail",
-                    "session_id": self.session_id,
-                }
-
+    
             if not self.agent:
                 return {
                     "response": "⚠️ Assistant not initialized.",
@@ -224,33 +293,27 @@ class AmexPolicyAssistant:
                     "reason": "No agent",
                     "session_id": self.session_id,
                 }
-
+    
             reply = self.agent(query)
             response_text = reply.response if hasattr(reply, "response") else str(reply)
-
-            guard_output = self.guardrails_manager.apply_guardrail(response_text, is_input=False)
-
-            if isinstance(guard_output, dict) and guard_output.get("action") == "GUARDRAIL_INTERVENED":
+    
+            guard_output = self.guardrails_manager.apply_guardrails(response_text, is_input=False)
+    
+            # --- Block output if guardrail intervened ---
+            if guard_output and isinstance(guard_output, dict) and guard_output.get("action") == "GUARDRAIL_INTERVENED":
                 return {
-                    "response": "⚠️ Response blocked by output safety filters.",
+                    "response": guard_output.get("outputs", [{}])[0].get("text", "⚠️ Response blocked by output safety filters."),
                     "blocked": True,
-                    "reason": "Output blocked",
+                    "reason": guard_output.get("reason", "Output blocked"),
                     "session_id": self.session_id,
                 }
-            elif isinstance(guard_output, str):
-                return {
-                    "response": guard_output,
-                    "blocked": True,
-                    "reason": "Output blocked",
-                    "session_id": self.session_id,
-                }
-
+    
             return {
                 "response": response_text,
                 "blocked": False,
                 "session_id": self.session_id,
             }
-
+    
         except Exception as e:
             logger.exception(f"❌ Failed to process query: {e}")
             return {
@@ -259,6 +322,7 @@ class AmexPolicyAssistant:
                 "reason": "System error",
                 "session_id": self.session_id,
             }
+    
 
     async def stream_response(self, query: str):
         try:
@@ -266,9 +330,6 @@ class AmexPolicyAssistant:
 
             if isinstance(guard_input, dict) and guard_input.get("action") == "GUARDRAIL_INTERVENED":
                 yield "⚠️ Input violates Amex safety policy."
-                return
-            elif isinstance(guard_input, str):
-                yield guard_input
                 return
 
             if not self.agent:
@@ -287,13 +348,15 @@ class AmexPolicyAssistant:
 
             if isinstance(guard_output, dict) and guard_output.get("action") == "GUARDRAIL_INTERVENED":
                 yield "\n⚠️ Response blocked by safety policy."
-            elif isinstance(guard_output, str):
-                yield "\n" + guard_output
 
         except Exception as e:
             logger.exception(f"❌ Streaming failed: {e}")
             yield "⚠️ Error generating response."
 
+
+# --------------------------------------------------------------------------------------
+# Local dry-run test
+# --------------------------------------------------------------------------------------
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
