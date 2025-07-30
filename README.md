@@ -1,6 +1,6 @@
 # 🛡️ Enterprise-Grade AI Customer Service Platform for American Express
 
-## To read the Project in detail please read **About.md** 
+## To read about the Project in detail please read **About.md** 
 
 ## Next-Generation GenAI for Financial Services  
 *AI you can trust, at enterprise scale. Built for the real world.*
