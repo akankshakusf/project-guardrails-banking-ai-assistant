@@ -46,7 +46,8 @@ def display_status():
 def display_message(role: str, content: str, blocked: bool = False):
     avatar = "👤" if role == "user" else "🤖"
     # Change this hex to your desired color
-    bg_color = "#E8EAF6" if role == "user" else "#006FCF"
+    # bg_color = "#E8EAF6" if role == "user" else "#006FCF"
+    bg_color = "#003366" if role == "user" else "#006FCF" 
     border = "#90caf9" if role == "user" else "#ffb74d"
     safe_content = html.escape(content)
     if blocked:
@@ -130,27 +131,60 @@ def amex_streamlit_app():
 
         if st.session_state.initialization_status == "success":
             user_input = st.chat_input("Ask your Amex banking or rewards question...")
+            # if user_input:
+            #     st.session_state.chat_history.append({
+            #         'role': 'user',
+            #         'content': user_input,
+            #         'blocked': False
+            #     })
+            #     with st.spinner("Thinking..."):
+            #         try:
+            #             agent = st.session_state.amex_coordinator
+            #             if agent:
+            #                 result = agent.route_query(user_input, user_type=st.session_state.user_type)
+            #                 st.session_state.chat_history.append({
+            #                     'role': 'assistant',
+            #                     'content': result['response'],
+            #                     'blocked': result.get('blocked', False)
+            #                 })
+            #                 st.rerun()
+            #             else:
+            #                 st.error("Assistant is not initialized.")
+            #         except Exception as e:
+            #             st.error(f"Error processing query: {e}")
+
             if user_input:
+                # Add user message
                 st.session_state.chat_history.append({
                     'role': 'user',
                     'content': user_input,
                     'blocked': False
                 })
+                # Store pending input to process after rerun
+                st.session_state.pending_user_input = user_input
+                st.rerun()
+
+            # After rerun, if there's pending input, process it
+            pending_input = st.session_state.get("pending_user_input")
+            if pending_input:
                 with st.spinner("Thinking..."):
                     try:
                         agent = st.session_state.amex_coordinator
                         if agent:
-                            result = agent.route_query(user_input, user_type=st.session_state.user_type)
+                            result = agent.route_query(pending_input, user_type=st.session_state.user_type)
                             st.session_state.chat_history.append({
                                 'role': 'assistant',
                                 'content': result['response'],
                                 'blocked': result.get('blocked', False)
                             })
-                            st.rerun()
+                            # Clear pending input
+                            st.session_state.pending_user_input = None
+                            st.rerun()  # Show assistant response immediately
                         else:
                             st.error("Assistant is not initialized.")
                     except Exception as e:
                         st.error(f"Error processing query: {e}")
+                        st.session_state.pending_user_input = None
         else:
             st.info("Please initialize the assistant using the sidebar configuration.")
 

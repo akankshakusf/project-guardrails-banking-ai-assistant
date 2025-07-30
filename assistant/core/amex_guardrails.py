@@ -47,13 +47,23 @@ class BedrockGuardrailWrapper:
         pii_entities,
         grounding_required,
     ):
+        # Check denied topics
         for topic in denied_topics:
             if topic.lower() in text.lower():
                 logger.debug(f"Matched denied topic: {topic}")
                 return {
                     "action": "GUARDRAIL_INTERVENED",
                     "reason": f"Matched denied topic: {topic}",
-                    "outputs": [{"text": f"⚠️ Topic '{topic}' is restricted."}]
+                    "outputs": [{"text": f"Blocked by guardrails per Amex policy. ⚠️ Topic '{topic}' is restricted."}]
+                }
+        # Check blocked words
+        for word in blocked_words:
+            if word.lower() in text.lower():
+                logger.debug(f"Matched blocked word: {word}")
+                return {
+                    "action": "GUARDRAIL_INTERVENED",
+                    "reason": f"Matched blocked word: {word}",
+                    "outputs": [{"text": f"Blocked by guardrails per Amex policy. ⚠️ Word '{word}' is restricted."}]
                 }
         return {"action": "ALLOW"}
 
@@ -62,6 +72,24 @@ class AmexGuardrailsManager:
         self.active_profile = profile
         self.guardrail_id = guardrail_id  # ✅ FIXED
         self.profiles: Dict[str, GuardrailProfile] = {
+            "internal": GuardrailProfile(
+                profile="internal",
+                use_bedrock_guardrails=True,
+                filter_input=True,
+                filter_output=True,
+                grounding_required=False,
+                denied_topics=[
+                    "fraud techniques", "how to bypass", "exploit", "system flaws"
+                ],
+                blocked_words=["rob", "steal", "break model", "break", "fake"],  # ✅ Added to meet Bedrock requirements
+                allowed_words=[
+                    "fraud", "risk", "scoring", "credit limit",
+                    "chargeback", "delinquency" ,"credit scores", "credit card"
+                ],
+                pii_entities=[
+                    "NAME", "EMAIL", "PHONE", "US_SOCIAL_SECURITY_NUMBER"
+                ]
+            ),
             "external": GuardrailProfile(
                 profile="external",
                 use_bedrock_guardrails=True,
@@ -78,38 +106,26 @@ class AmexGuardrailsManager:
                 blocked_words=[
                     "hack", "bypass", "exploit", "reverse engineer", "fraud",
                     "unauthorized", "adversarial", "jailbreak", "malicious",
-                    "sql injection", "scrape notion", "data exfiltration"
+                    "sql injection", "scrape notion", "data exfiltration",
+                    "rob", "steal", "break model", "break", "fake"
                 ],
-                allowed_words=[],
+                allowed_words=["card", "account", "payment", "limit",
+                     "rewards", "fees", "balance",
+                    "benefits", "customer", "support",
+                    "credit", "score", "purchase", "offer"],
                 pii_entities=[
                     "NAME", "EMAIL", "PHONE", "ADDRESS",
                     "US_SOCIAL_SECURITY_NUMBER", "CREDIT_DEBIT_CARD_NUMBER",
                     "DRIVER_ID", "US_PASSPORT_NUMBER"
                 ]
-            ),
-            "internal": GuardrailProfile(
-                profile="internal",
-                use_bedrock_guardrails=True,
-                filter_input=True,
-                filter_output=True,
-                grounding_required=False,
-                denied_topics=[
-                    "fraud techniques", "how to bypass", "exploit", "internal system flaws"
-                ],
-                blocked_words=["jailbreak", "rob", "bomb", "break model"],  # ✅ Added to meet Bedrock requirements
-                allowed_words=[
-                    "fraud", "risk", "scoring", "credit limit", "internal",
-                    "chargeback", "delinquency" ,"credit scores", "underwriting", "credit card"
-                ],
-                pii_entities=[
-                    "NAME", "EMAIL", "PHONE", "US_SOCIAL_SECURITY_NUMBER"
-                ]
             )
+            
         }
 
     def apply_guardrails(self, text: str, user_type: str = "external", is_input: bool = True) -> Optional[str]:
         profile_key = user_type.lower()
         profile = self.profiles.get(profile_key)
+        print(f"[DEBUG] Using profile: {profile_key}, denied_topics: {profile.denied_topics}")
 
         if not profile:
             logger.warning(f"No guardrail profile found for user_type: {user_type}")
@@ -123,7 +139,7 @@ class AmexGuardrailsManager:
 
         result = BedrockGuardrailWrapper.run_guardrails(
             text=text,
-            guardrail_id=f"amex-guardrail-{profile_key}",
+            guardrail_id=f"amex-guardrails-{profile_key}",
             profile=profile.profile,
             filter_type="input" if is_input else "output",
             denied_topics=profile.denied_topics,

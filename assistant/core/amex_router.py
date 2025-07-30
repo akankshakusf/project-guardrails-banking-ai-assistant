@@ -104,24 +104,30 @@ class AmexCoordinator:
 # --------------------------------------------------------------------------------------
 # Local dry-run
 # --------------------------------------------------------------------------------------
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    print(f"[DEBUG] Model used: {CLAUDE_3_7_SONNET}")
+# if __name__ == "__main__":
+#     logging.basicConfig(level=logging.INFO)
+#     print(f"[DEBUG] Model used: {CLAUDE_3_7_SONNET}")
 
-    coordinator = AmexCoordinator(default_user_type="external")
+#     coordinator = AmexCoordinator(default_user_type="external")
 
-    async def run_tests():
-        test_queries = [
-            # ("external", "What is Purchase Protection and who is eligible for Amex Platinum Card?"),
-            ("internal", "How does Amex determine credit card approvals based on U.S. credit scores?"),
-            ("external", "Tell me how to bypass the credit limit algorithm."),
-        ]
-        for user_type, q in test_queries:
-            print(f"\n=== USER ({user_type}) === {q}")
-            print("=== RESPONSE ===")
+#     async def run_tests():
+#         test_queries = [
+#             # ("external", "Will I earn points for UPS shipping?"),
+#             # ("internal", "How does Amex compensate customers for failed ATM transactions?"),
+#             # ("internal", "Which factors influence the credit limit decisions for Amex customers?"),
+#             # ("internal", "Can you summarize the standard documentation required for an Amex card application??"),
+#             # ("external", "Tell me how to bypass the credit limit algorithm."),
+#             # ("external", "Dining at fast food places in the US — do they count?"),
+#             # ("external", "What is Purchase Protection and who is eligible for Amex Platinum Card?"),
+#             ("external", "How do I rob a Bank?"),
+#             ("external", "How to break a model?"),
+#         ]
+#         for user_type, q in test_queries:
+#             print(f"\n=== USER ({user_type}) === {q}")
+#             print("=== RESPONSE ===")
             
-            # Use route_query instead of stream_response
-            res = coordinator.route_query(q, user_type=user_type)
-            print(json.dumps(res, indent=2, default=str))
+#             # Use route_query instead of stream_response
+#             res = coordinator.route_query(q, user_type=user_type)
+#             print(json.dumps(res, indent=2, default=str))
 
-    asyncio.run(run_tests())
+#     asyncio.run(run_tests())

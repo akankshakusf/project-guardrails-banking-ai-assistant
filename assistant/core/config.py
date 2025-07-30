@@ -1,4 +1,4 @@
-# config.py
+# assistant/core/config.py
 
 import boto3
 from enum import Enum

@@ -150,23 +150,23 @@ class AmexRecommendationAssistant:
 # --------------------------------------------------------------------------------------
 # Simple local dry-run (optional)
 # --------------------------------------------------------------------------------------
-if __name__ == "__main__":
-    agent = AmexRecommendationAssistant()
+# if __name__ == "__main__":
+#     agent = AmexRecommendationAssistant()
 
-    tests = [
-        "I’m booking a flight on Delta. Will I get extra points?",
-        "We’re staying at a Marriott through a vacation package — do we still earn?",
-        "Is UPS shipping eligible for rewards?",
-        "We’ll rent from Hertz in Paris. Will it qualify?",
-        "We buy printer paper from Staples — does that count?",
-        "Online shopping from a US retailer, shipped domestically — how is it rewarded?",
-        "Dining at fast food places in the US — do they count?",
-        "Not sure, we’re paying for a software subscription — what category is this?",
-    ]
+#     tests = [
+#         "I’m booking a flight on Delta. Will I get extra points?",
+#         "We’re staying at a Marriott through a vacation package — do we still earn?",
+#         "Is UPS shipping eligible for rewards?",
+#         "We’ll rent from Hertz in Paris. Will it qualify?",
+#         "We buy printer paper from Staples — does that count?",
+#         "Online shopping from a US retailer, shipped domestically — how is it rewarded?",
+#         "Dining at fast food places in the US — do they count?",
+#         "Not sure, we’re paying for a software subscription — what category is this?",
+#     ]
 
-    for q in tests:
-        print("\n=== USER ===")
-        print(q)
-        r = agent(q)
-        print("\n=== ASSISTANT ===")
-        print(getattr(r, "response", str(r)))
+#     for q in tests:
+#         print("\n=== USER ===")
+#         print(q)
+#         r = agent(q)
+#         print("\n=== ASSISTANT ===")
+#         print(getattr(r, "response", str(r)))

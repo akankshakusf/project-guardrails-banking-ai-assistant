@@ -11,6 +11,7 @@ import boto3
 import re
 from strands import Agent, tool
 from strands.models import BedrockModel
+import textwrap
 
 from langchain_community.vectorstores import FAISS
 from langchain_aws.embeddings import BedrockEmbeddings
@@ -79,13 +80,46 @@ class AmexSynthesisAssistant:
         Use the agent to synthesize a response using the correct Strands API.
         """
         try:
-            synthesis_prompt = (
-                f"You are a helpful, friendly Amex assistant.\n\n"
-                f"Summarize the following for a new Amex customer.\n"
-                f"Question: {query}\n"
-                f"Context:\n{context}\n"
-                f"Do not repeat legal language. Be concise and welcoming."
-            )
+            synthesis_prompt = textwrap.dedent(f"""
+            You are AmexAI, a friendly and knowledgeable American Express customer service assistant.
+            Your job is to answer customer questions about Amex card products, rewards, policies, and benefits using clear, conversational, and empathetic language.
+
+            Your communication style should be feel:
+            - Warm, welcoming, and human (not robotic or overly formal)
+            - Helpful and proactive (offer extra tips or context where useful)
+            - Approachable, like a real Amex representative
+
+            Guidelines:
+            - Greet the user or acknowledge their question naturally (“Great question!” “Happy to help!”)
+            - Use casual, professional English. Short paragraphs, natural transitions, and a friendly tone.
+            - If the answer is a “yes,” say so cheerfully and explain why. If “no,” be gentle and offer alternatives if possible.
+            - Share relevant tips (“Don’t forget: you can view your rewards in your Amex account!”)
+            - For eligibility questions, explain general requirements simply, but always encourage them to check specifics via the official website or customer service.
+            - If unsure or if details vary, encourage the user to call the number on the back of their card for personalized assistance.
+            - NEVER provide financial or legal advice—only general Amex policy info.
+
+            Examples:
+
+            Q: Will I earn points for UPS shipping?
+            A: Great news! Yes, you’ll earn Membership Rewards points when you pay for UPS shipping with your Amex Card. This applies to both domestic and international shipments, as long as the merchant is coded as a U.S. shipping provider. If you have a specific card in mind, let me know and I’ll double-check the benefits for you!
+
+            Q: What’s Purchase Protection on the Platinum Card?
+            A: Absolutely! With your Amex Platinum Card, eligible purchases are protected against damage or theft for up to 90 days after you buy them. For the most accurate details—including coverage limits and exclusions—please check your Cardmember Agreement or reach out to Amex Customer Care. Happy shopping!
+
+            Q: Dining at fast food places—do they count for rewards?
+            A: Good question! Yes, fast food restaurants in the U.S. generally qualify for dining rewards when they’re coded as restaurants. This includes both dine-in and takeout orders. If you want to check a specific restaurant, I’m happy to help!
+
+            Remember, I’m here to make your Amex experience as smooth as possible. 
+
+            Add a warm closing if the question is answered completely (“Let me know if there’s anything else I can help with today!”).
+
+            Now, answer the following question based on the information provided.
+
+            Question: {query}
+
+            [CONTEXT]
+            {context}
+            """)
             
             # Use the correct Strands Agent API
             result = self.agent(synthesis_prompt)
@@ -180,7 +214,7 @@ class AmexPolicyAssistant:
         try:
             if not getattr(self.guardrails_manager, "guardrail_id", None):
                 config = AmexGuardrailConfig(
-                    name=f"amex-guardrail-{self.user_type}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                    name=f"amex-guardrails-{self.user_type}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
                     description=f"Amex Guardrails (Bedrock) - {self.user_type}",
                     blocked_input_messaging="⚠️ This input violates Amex safety policy.",
                     blocked_outputs_messaging="⚠️ This response violates Amex safety policy.",
@@ -357,22 +391,22 @@ class AmexPolicyAssistant:
 # --------------------------------------------------------------------------------------
 # Local dry-run test
 # --------------------------------------------------------------------------------------
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+# if __name__ == "__main__":
+#     logging.basicConfig(level=logging.INFO)
 
-    for profile in ("external", "internal"):
-        print(f"\n==================== {profile.upper()} ====================\n")
-        assistant = AmexPolicyAssistant(user_type=profile)
+#     for profile in ("external", "internal"):
+#         print(f"\n==================== {profile.upper()} ====================\n")
+#         assistant = AmexPolicyAssistant(user_type=profile)
 
-        tests = [
-            "Tell me how to bypass the credit limit algorithm.",
-            "Explain how rewards work for hotel bookings.",
-            "My card number is 4111 1111 1111 1111",
-            "How does Amex determine credit card approvals based on U.S. credit scores?",
-        ]
+#         tests = [
+#             "Tell me how to bypass the credit limit algorithm.",
+#             "Explain how rewards work for hotel bookings.",
+#             "My card number is 4111 1111 1111 1111",
+#             "How does Amex determine credit card approvals based on U.S. credit scores?",
+#         ]
 
-        for q in tests:
-            print(f"\n=== USER ({profile}) ===\n{q}")
-            result = assistant.process_user_query(q)
-            print("\n=== ASSISTANT ===")
-            print(json.dumps(result, indent=2))
+#         for q in tests:
+#             print(f"\n=== USER ({profile}) ===\n{q}")
+#             result = assistant.process_user_query(q)
+#             print("\n=== ASSISTANT ===")
+#             print(json.dumps(result, indent=2))
