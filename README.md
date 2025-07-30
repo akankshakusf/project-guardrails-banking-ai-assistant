@@ -1,4 +1,4 @@
-# 🛡️ Enterprise-Grade AI Customer Service Platform for American Express
+# 🛡️ Enterprise-Grade AI Customer Service Platform for Banking AI ChatBot 
 
 ## To read about the Project in detail please read **About.md** 
 
