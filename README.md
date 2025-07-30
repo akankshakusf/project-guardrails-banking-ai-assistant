@@ -46,6 +46,27 @@ Every user message is routed to the *right* expert:
 
 ---
 
+## 🏗️ System Architecture
+
+- **Intelligent Router**: Routes every query to either a policy agent (RAG), a rewards agent (rule-based + LLM), or internal assistant, depending on user type and intent.
+- **Knowledge Base Fusion**:  
+  - Ingests PDFs, cleans, chunks, deduplicates, and embeds  
+  - Syncs Notion FAQ data, including toggled and nested content  
+  - Unified FAISS vector DB for fast semantic search and retrieval
+- **Security First**:  
+  - Role-based guardrails applied to both input and output  
+  - Real-time PII redaction and topic/word filtering  
+  - All events logged and versioned for monitoring and traceability
+- **Monitoring and Observability**:  
+  - Bedrock dashboard visualizes every guardrail intervention, blocked topic, or masked PII event  
+  - Policy versioning, activity logs, and compliance-ready exports
+- **NLG Synthesis**:  
+  - Every answer rewritten by Claude for tone, clarity, and engagement  
+  - Custom system prompts tuned for friendliness and brand voice
+
+---
+
+
 ## 🚀 Quickstart
 
 1. **Clone this repo:**  
