@@ -58,7 +58,9 @@ Every user message is routed to the *right* expert:
     pip install -r requirements.txt
 
 3. **Configure AWS credentials:**
-    ```Ensure you have AWS credentials for Bedrock and Notion API access.
+    ```bash
+    Ensure you have AWS credentials for Bedrock and Notion API access.
 
 4. **Launch the UI:**
-    ```streamlit run assistant/ui/amex_streamlit_app.py
+    ```bash
+    streamlit run assistant/ui/amex_streamlit_app.py
