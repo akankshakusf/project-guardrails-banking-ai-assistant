@@ -1,14 +1,13 @@
 # 🛡️ Enterprise-Grade AI Customer Service Platform for Banking AI ChatBot 
 
-## To read about the Project in detail please read **About.md** 
-
-## Video Explaination of the Report
-[![alt text](demo.mp4)](https://github.com/user-attachments/assets/46dc8d5f-d6a3-4096-a7f8-9b79dcb90a2f)
+### To read about the Project in detail please read **About.md** \
 
 
 ## Next-Generation GenAI for Financial Services  
 Architecture - <img src="https://github.com/akankshakusf/project-guardrails-banking-ai-assistant/blob/master/images/architecture.png" width="70%" />
-
+---
+## Video Explaination of the Report
+[![alt text](demo.mp4)](https://github.com/user-attachments/assets/46dc8d5f-d6a3-4096-a7f8-9b79dcb90a2f)
 ---
 
 ## 🌟 Why This Project Matters
