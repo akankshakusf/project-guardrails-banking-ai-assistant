@@ -3,8 +3,10 @@
 ## To read about the Project in detail please read **About.md** 
 
 ### Project Demo :
+## 📹 Video Explanation of the Report
 
-[![Watch the demo](demo-thumb.png)](https://github.com/akankshakusf/project-guardrails-banking-ai-assistant/blob/master/demo.mp4)
+[▶️ Click here to watch the demo video (MP4)](https://github.com/akankshakusf/project-guardrails-banking-ai-assistant/blob/master/demo.mp4)
+
 
 
 
