@@ -2,12 +2,8 @@
 
 ## To read about the Project in detail please read **About.md** 
 
-### Project Demo :
-## 📹 Video Explanation of the Report
-
-
-## App Demo:  https://github.com/user-attachments/assets/46dc8d5f-d6a3-4096-a7f8-9b79dcb90a2f
-
+## Video Explaination of the Report
+[![alt text](demo.mp4)](https://github.com/user-attachments/assets/46dc8d5f-d6a3-4096-a7f8-9b79dcb90a2f)
 
 
 ## Next-Generation GenAI for Financial Services  
