@@ -3,7 +3,7 @@
 ## To read about the Project in detail please read **About.md** 
 
 ## Next-Generation GenAI for Financial Services  
-*AI you can trust, at enterprise scale. Built for the real world.*
+Architecture - <img src="https://github.com/akankshakusf/project-guardrails-banking-ai-assistant/blob/master/images/architecture.png" width="70%" />
 
 ---
 
