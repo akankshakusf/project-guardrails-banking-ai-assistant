@@ -2,7 +2,10 @@
 
 ## To read about the Project in detail please read **About.md** 
 
-### Project Demo : [Direct link to demo video (MP4)](https://github.com/akankshakusf/project-guardrails-banking-ai-assistant/blob/master/demo.mp4)
+### Project Demo :
+
+[![Watch the demo](demo-thumb.png)](https://github.com/akankshakusf/project-guardrails-banking-ai-assistant/blob/master/demo.mp4)
+
 
 
 ## Next-Generation GenAI for Financial Services  
