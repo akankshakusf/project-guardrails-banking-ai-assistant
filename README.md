@@ -2,6 +2,9 @@
 
 ## To read about the Project in detail please read **About.md** 
 
+### Project Demo :
+
+
 ## Next-Generation GenAI for Financial Services  
 Architecture - <img src="https://github.com/akankshakusf/project-guardrails-banking-ai-assistant/blob/master/images/architecture.png" width="70%" />
 
