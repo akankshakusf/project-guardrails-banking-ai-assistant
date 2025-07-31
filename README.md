@@ -5,8 +5,8 @@
 ### Project Demo :
 ## 📹 Video Explanation of the Report
 
-[▶️ Click here to watch the demo video (MP4)](https://github.com/akankshakusf/project-guardrails-banking-ai-assistant/blob/master/demo.mp4)
 
+## App Demo:  https://github.com/user-attachments/assets/46dc8d5f-d6a3-4096-a7f8-9b79dcb90a2f
 
 
 
