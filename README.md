@@ -2,7 +2,7 @@
 
 ## To read about the Project in detail please read **About.md** 
 
-### Project Demo :
+### Project Demo : https://drive.google.com/file/d/1JxbQK3bRr27meI-AOXj13Bv_rZHsauUI/view?usp=sharing
 
 
 ## Next-Generation GenAI for Financial Services  
