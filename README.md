@@ -1,6 +1,6 @@
 # 🛡️ Enterprise-Grade AI Customer Service Platform for Banking AI ChatBot 
 
-### To read about the Project in detail please read **About.md** \
+### To read about the Project in detail please read **About.md** 
 
 
 ## Next-Generation GenAI for Financial Services  
