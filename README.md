@@ -82,11 +82,11 @@ Every user message is routed to the *right* expert:
 
 2. **Install requirements:**
     ```bash
-    pip install -r requirements.txt
+    uv pip install -e
 
 3. **Configure AWS credentials:**
     ```bash
-    Ensure you have AWS credentials for Bedrock and Notion API access.
+    Ensure you have AWS credentials for Bedrock and Notion API access added to .env
 
 4. **Launch the UI:**
     ```bash
